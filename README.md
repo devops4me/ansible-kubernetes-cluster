@@ -59,6 +59,19 @@ Now validate the inventory with **`ansible -m ping all -i hosts.ini`**.
 
 ---
 
+## How to Determine Versions
+
+Sometimes Kubernetes (via the **`kubeadm init`** does not like the docker version. To change it you need to ssh into all nodes and
+
+- **`sudo apt-cache showpkg docker-ce`** - discover the available versions
+- read the error and reset the version within the Install docker task
+- **`sudo apt-get remove docker-ce --assume-yes`** - remove the current docker-ce package
+- **`sudo apt autoremove docker-ce --assume-yes`** - and again
+- **`sudo apt-get remove docker-ce-cli --assume-yes`** - remove the current docker-ce-cli package
+- **`sudo apt autoremove docker-ce-cli --assume-yes`** - and again
+
+
+
 
 ## Create the Ansible Playbooks that provision Kubernetes
 
