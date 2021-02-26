@@ -59,18 +59,30 @@ Now validate the inventory with **`ansible -m ping all -i hosts.ini`**.
 
 ---
 
+
 ## How to Determine Versions
 
 Sometimes Kubernetes (via the **`kubeadm init`** does not like the docker version. To change it you need to ssh into all nodes and
 
 - **`sudo apt-cache showpkg docker-ce`** - discover the available versions
 - read the error and reset the version within the Install docker task
+
+- **`docker system prune --all --force`**
 - **`sudo apt-get remove docker-ce --assume-yes`** - remove the current docker-ce package
 - **`sudo apt autoremove docker-ce --assume-yes`** - and again
 - **`sudo apt-get remove docker-ce-cli --assume-yes`** - remove the current docker-ce-cli package
 - **`sudo apt autoremove docker-ce-cli --assume-yes`** - and again
+- **`sudo apt-get remove containerd.io --assume-yes`** - and again
+- **`sudo apt autoremove containerd.io --assume-yes`** - remove the current containerd.io package
 
+When we need to backpedal and remove the kubernetes packages use these commands.
 
+- **`sudo apt-get remove kubectl --assume-yes`**
+- **`sudo apt autoremove kubectl --assume-yes`**
+- **`sudo apt-get remove kubelet --assume-yes`**
+- **`sudo apt autoremove kubelet --assume-yes`**
+- **`sudo apt-get remove kubeadm --assume-yes`**
+- **`sudo apt autoremove kubeadm --assume-yes`**
 
 
 ## Create the Ansible Playbooks that provision Kubernetes
