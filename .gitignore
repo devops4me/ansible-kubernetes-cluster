@@ -7,3 +7,6 @@ node-join-cmd.sh
 
 ## Ignore the kubeadm cluster initialization log output file
 kubeadm-init-output.log
+
+## Ignore the file noting the master hostname and IP address
+master-hostname-address.txt
