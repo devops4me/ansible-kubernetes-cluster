@@ -10,7 +10,6 @@
 #  - Execute join command in register directly (no need to copy a file to worker)
 #  - remove skip ca verification in join command
 #  - make token be generated maybe by either kubeadm or Ansible
-#  - cleanup mkdir, cp and chown task
 #
 - hosts: all
   become: true
@@ -118,7 +117,7 @@
 
 - hosts: master
   become: true
-  name: Configure Control Plane and Setup kubectl configuration
+  name: Setup control plane and make kubectl talk to cluster
   tasks:
   - name: Reset any previous installs run by kubeadm init
     become: true
@@ -132,39 +131,43 @@
     local_action: copy content={{ kubeadm_init_output.stdout }} dest=kubeadm-init-output.log
     become: false
 
-  - name: Copy kubectl configuration into user space
-    become: true
-    copy:
-      remote_src: yes
-      src: /etc/kubernetes/admin.conf
-      dest: ~/.kube/config
-      owner: ubuntu
-      group: ubuntu
-      mode: u=rw,g=r,o=r
-
-#####  - name: Setup kubectl config on master for Calico to use
-#####    command: "{{ item }}"
-#####    with_items:
-#####     - mkdir -p /home/ubuntu/.kube
-#####     - cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config
-#####     - chown ubuntu:ubuntu /home/ubuntu/.kube/config
-
   - name: Fetch kubectl config for laptop (ansible host) to use
     fetch:
       src: /etc/kubernetes/admin.conf
       dest: kubectl-configuration.yml
+      backup: yes
       flat: yes
 
-  - name: Copy to ~/.kube/config on laptop so that kubectl commands work
+  - name: Copy to local user ~/.kube/config so kubectl connects to cluster
     become: false
     copy:
       src: kubectl-configuration.yml
       dest: ~/.kube/config
+      backup: yes
     delegate_to: localhost
+
+#  - name: Create the .kube directory if it does not exist
+#    file:
+#      path: /home/ubuntu/.kube
+#      state: directory
+#      owner: ubuntu
+#      group: docker
+#      mode: 0755
+
+#  - name: Copy kubectl configuration for calico to talk to cluster
+#    become: true
+#    copy:
+#      remote_src: no
+#      src: kubectl-configuration.yml
+#      dest: /home/ubuntu/.kube/config
+#      owner: ubuntu
+#      group: docker
+#      mode: 0744
 
   - name: Install Calico Pod Networking for Less than 50 Nodes
     become: false
     command: kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+    delegate_to: localhost
 
   - name: Generate join command
     command: kubeadm token create --print-join-command

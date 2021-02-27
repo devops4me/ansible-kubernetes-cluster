@@ -112,6 +112,22 @@ playbook: cluster-playbook.yml
 
 ---
 
+## Troubleshooting Tactics
+
+### Run commands in isolation
+
+**You can run each task on the command line instead of waiting for the whole playbook to run through before getting feedback.**
+
+This examples copies a file from one place to another on a remote host.
+
+```
+ansible <host> -m copy \
+    -a "src=/home/ubuntu/pumpkin.txt dest=/home/ubuntu/.kube/new-pumpkin.txt remote_src=yes owner=ubuntu group=docker mode=0644" \
+    -i hosts.ini \
+    --become-user root
+```
+
+
 
 ## How to Determine Versions
 
