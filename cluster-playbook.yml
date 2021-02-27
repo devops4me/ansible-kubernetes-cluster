@@ -138,7 +138,7 @@
       backup: yes
       flat: yes
 
-  - name: Copy to local user ~/.kube/config so kubectl connects to cluster
+  - name: Copy to local user so laptop kubectl connects to cluster
     become: false
     copy:
       src: kubectl-configuration.yml
@@ -146,25 +146,7 @@
       backup: yes
     delegate_to: localhost
 
-#  - name: Create the .kube directory if it does not exist
-#    file:
-#      path: /home/ubuntu/.kube
-#      state: directory
-#      owner: ubuntu
-#      group: docker
-#      mode: 0755
-
-#  - name: Copy kubectl configuration for calico to talk to cluster
-#    become: true
-#    copy:
-#      remote_src: no
-#      src: kubectl-configuration.yml
-#      dest: /home/ubuntu/.kube/config
-#      owner: ubuntu
-#      group: docker
-#      mode: 0744
-
-  - name: Install Calico Pod Networking for Less than 50 Nodes
+  - name: Install Calico Pod Networking from laptop kubectl
     become: false
     command: kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
     delegate_to: localhost
