@@ -22,39 +22,92 @@ To create the Ansible inventory the steps are
 Put this section inside the **`~/.ssh/config**` file to help Ansible configure the kubernetes cluster machines.
 
 ```
-Host kubemaster
-HostName 127.0.0.1
-User vagrant
-Port <master_port>
-IdentityFile </path/to/master/private/key>
-StrictHostKeyChecking no
+## ###################################### ##
+## Rack 1 Raspberry Pi Kubernetes Cluster ##
+## -------------------------------------- ##
+## ###################################### ##
 
-Host kubeworker1
-HostName 127.0.0.1
-User vagrant
-Port <worker1_port>
-IdentityFile </path/to/worker1/private/key>
-StrictHostKeyChecking no
+Host master
+  HostName pi-r1d1
+  User ubuntu
+  IdentityFile ~/.ssh/services.cluster.pi-r1d1.pem
+  StrictHostKeyChecking no
 
-Host kubeworker2
-HostName 127.0.0.1
-User vagrant
-Port <worker2_port>
-IdentityFile </path/to/worker2/private/key>
-StrictHostKeyChecking no
+Host worker1
+  HostName pi-r1d2
+  User ubuntu
+  IdentityFile ~/.ssh/services.cluster.pi-r1d2.pem
+  StrictHostKeyChecking no
+
+Host worker2
+  HostName pi-r1d3
+  User ubuntu
+  IdentityFile ~/.ssh/services.cluster.pi-r1d3.pem
+  StrictHostKeyChecking no
+
+Host worker3
+  HostName pi-r1d4
+  User ubuntu
+  IdentityFile ~/.ssh/services.cluster.pi-r1d4.pem
+  StrictHostKeyChecking no
 ```
 
 ### The Ansislbe Inventory (Hosts) File
 
-Create this inventory (hosts) file. The **`ansible_host`** refers to the **`Host`** variable inside the **`~/.ssh/config`** file.
+Use the already available inventory (hosts) file. As we have carefully setup our hosts in the **`~/.ssh/config`** file our Ansible inventory is extremely simple!
 
 ```
-master ansible_host=kubemaster
-worker ansible_host=kubeworker1
-worker ansible_host=kubeworker2
+master
+
+[worker]
+worker1
+worker2
+worker3
 ```
 
-Now validate the inventory with **`ansible -m ping all -i hosts.ini`**.
+Now validate the inventory with these commands
+
+- **`ansible -m ping all -i hosts.ini`**
+- **`ansible-playbook -i hosts.ini --list-hosts cluster-playbook.yml`**
+
+The output of the command with **`--list-hosts`** shows that the **hosts pattern**
+
+- **`all`** - will execute on all 4 machines
+- **`master`** - will execute on the master machine
+- **`worker`** - will execute on the 3 workers
+
+```
+playbook: cluster-playbook.yml
+
+  play #1 (all): Configure the Kubernetes Cluster Nodes	TAGS: []
+    pattern: ['all']
+    hosts (4):
+      ansible_host=master
+      ansible_host=worker3
+      ansible_host=worker2
+      ansible_host=worker1
+
+  play #2 (master): Configure Control Plane and Setup kubectl configuration	TAGS: []
+    pattern: ['master']
+    hosts (1):
+      ansible_host=master
+
+  play #3 (worker): Get each Worker to Join the Cluster	TAGS: []
+    pattern: ['worker']
+    hosts (3):
+      ansible_host=worker1
+      ansible_host=worker3
+      ansible_host=worker2
+```
+
+
+---
+
+
+## Create Kubernetes Cluster via Ansible
+
+- **`ansible-playbook -i hosts.ini --syntax-check cluster-playbook.yml`**
+- **`ansible-playbook -i hosts.ini cluster-playbook.yml`**
 
 
 ---
