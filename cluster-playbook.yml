@@ -132,12 +132,22 @@
     local_action: copy content={{ kubeadm_init_output.stdout }} dest=kubeadm-init-output.log
     become: false
 
-  - name: Setup kubectl config on master for Calico to use
-    command: "{{ item }}"
-    with_items:
-     - mkdir -p /home/ubuntu/.kube
-     - cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config
-     - chown ubuntu:ubuntu /home/ubuntu/.kube/config
+  - name: Copy kubectl configuration into user space
+    become: true
+    copy:
+      remote_src: yes
+      src: /etc/kubernetes/admin.conf
+      dest: ~/.kube/config
+      owner: ubuntu
+      group: ubuntu
+      mode: u=rw,g=r,o=r
+
+#####  - name: Setup kubectl config on master for Calico to use
+#####    command: "{{ item }}"
+#####    with_items:
+#####     - mkdir -p /home/ubuntu/.kube
+#####     - cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config
+#####     - chown ubuntu:ubuntu /home/ubuntu/.kube/config
 
   - name: Fetch kubectl config for laptop (ansible host) to use
     fetch:
@@ -148,8 +158,8 @@
   - name: Copy to ~/.kube/config on laptop so that kubectl commands work
     become: false
     copy:
-     src: kubectl-configuration.yml
-     dest: ~/.kube/config
+      src: kubectl-configuration.yml
+      dest: ~/.kube/config
     delegate_to: localhost
 
   - name: Install Calico Pod Networking for Less than 50 Nodes
