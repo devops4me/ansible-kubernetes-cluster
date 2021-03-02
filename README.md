@@ -104,28 +104,34 @@ playbook: cluster-playbook.yml
 ---
 
 
-## Create Kubernetes Cluster via Ansible
+## Keeping /etc/hosts database up to date on All Nodes
 
-- **`ansible-playbook -i hosts.ini --syntax-check cluster-playbook.yml`**
-- **`ansible-playbook -i hosts.ini cluster-playbook.yml`**
+**Kubernetes nodes all need to be able to talk to each other, not just with the master.**
+
+Ansible can add **`/etc/hosts`** entries for every host and if outdated entries already exist it can ammend them. Even better it does not add duplicate entries.
+
+```
+---
+- name: Add IP address of all hosts to all hosts
+  lineinfile:
+    dest: /etc/hosts
+    regexp: '.*{{ item }}$'
+    line: "{{ hostvars[item].ansible_host }} {{item}}"
+    state: present
+  when: hostvars[item].ansible_host is defined
+  with_items: "{{ groups.all }}"
+```
+
+If you are not running a DNS server but have a number of hosts to manage alongside a **fickle DHCP allocator**, the above Ansible code can be a godsend.
 
 
 ---
 
-## Troubleshooting Tactics
 
-### Run commands in isolation
+## Create Kubernetes Cluster via Ansible
 
-**You can run each task on the command line instead of waiting for the whole playbook to run through before getting feedback.**
-
-This examples copies a file from one place to another on a remote host.
-
-```
-ansible <host> -m copy \
-    -a "src=/home/ubuntu/pumpkin.txt dest=/home/ubuntu/.kube/new-pumpkin.txt remote_src=yes owner=ubuntu group=docker mode=0644" \
-    -i hosts.ini \
-    --become-user root
-```
+- **`ansible-playbook -i hosts.ini --syntax-check cluster-playbook.yml`**
+- **`ansible-playbook -i hosts.ini cluster-playbook.yml`**
 
 
 

@@ -123,6 +123,11 @@
     become: true
     command: kubeadm reset --force
 
+  - name: Remove previously installed Calico Pod Networking
+    become: false
+    command: kubectl delete -f https://docs.projectcalico.org/manifests/calico.yaml
+    delegate_to: localhost
+
   - name: Initialize the Kubernetes cluster using kubeadm
     command: kubeadm init --apiserver-advertise-address="{{ ansible_default_ipv4['address'] }}" --apiserver-cert-extra-sans="{{ ansible_hostname }}" --node-name={{ ansible_hostname }} --pod-network-cidr=192.168.0.0/24 --token=wls1ik.grvjcscyd0xrysrx
     register: kubeadm_init_output
