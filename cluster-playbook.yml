@@ -120,10 +120,10 @@
   name: Setup control plane and make kubectl talk to cluster
   tasks:
 
-  - name: Remove previously installed Calico Pod Networking
-    become: false
-    command: kubectl delete -f https://docs.projectcalico.org/manifests/calico.yaml
-    delegate_to: localhost
+#  - name: Remove previously installed Calico Pod Networking
+#    become: false
+#    command: kubectl delete -f https://docs.projectcalico.org/manifests/calico.yaml
+#    delegate_to: localhost
 
   - name: Reset any previous installs run by kubeadm init
     become: true
