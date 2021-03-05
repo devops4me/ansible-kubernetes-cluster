@@ -1,0 +1,37 @@
+---
+#
+# This playbook will attempt to join any worker node into the cluster being
+# controlled by the master node. The prerequisites are
+#
+#   - the playbook-all-nodes.yml has been run
+#   - the master was successfully created with playbook-master-init.yml
+#   - (either) the worker/s have never joined a cluster
+#   - (or)     the worker/s have been reset with playbook-worker-reset.yml
+#
+# The master node is used to extract a join command which is then executed
+# on the worker/s.
+#
+# A pre-check is to ssh into the master and validate that this command
+# correctly produces a join command.
+#
+#    kubeadm token create --print-join-command
+#
+
+- hosts: master
+  become: true
+  name: Acquire a join command necessary to induct new workers
+  tasks:
+
+  - name: Ask the master to generate a worker join command
+    command: kubeadm token create --print-join-command
+    become: false
+    register: join_command
+
+- hosts: worker
+  become: true
+  name: Get each worker node to join the kubernetes cluster
+  tasks:
+
+  - name: Join the worker node to the kubernetes cluster
+    become: true
+    command: {{ join_command.stdout_lines[0] }}
