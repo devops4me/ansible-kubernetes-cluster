@@ -18,7 +18,6 @@
 #
 
 - hosts: master
-  become: true
   name: Acquire a join command necessary to induct new workers
   tasks:
 
@@ -28,10 +27,9 @@
     register: join_command
 
 - hosts: worker
-  become: true
   name: Get each worker node to join the kubernetes cluster
   tasks:
 
   - name: Join the worker node to the kubernetes cluster
     become: true
-    command: {{ join_command.stdout_lines[0] }}
+    command: "{{ hostvars.master.join_command.stdout_lines[0] }}"
