@@ -52,8 +52,8 @@
       - docker-ce=5:19.03.15~3-0~ubuntu-focal
       - docker-ce-cli=5:19.03.15~3-0~ubuntu-focal
 ####      - containerd.io
-    notify:
-      - docker status
+##    notify:
+##      - docker status
 
   - name: Add ubuntu user to docker group
     user:
@@ -108,6 +108,21 @@
         - kubeadm 
         - kubectl
 #####        - kubernetes-cni
+
+#####################################
+######## IMPORTANT NOTE #############
+#####################################
+######## 
+######## WHEN I LOGGED IN to the worker at this point docker ps -a said permission denied
+######## Even when I exited emacs it still said permission denied
+######## So I rebooted the worker.
+######## Then doker ps -a worked like a dream (okay a list of zero containers)
+######## If this trial line works we need to experiment to see if this reboot is significant.
+######## 
+######## Can we prove that rushing forward without reboot fails and rebooting all works?
+######## If so we can look for a solution.
+######## 
+#####################################
 
 #  - name: Restart kubelet
 #    service:
