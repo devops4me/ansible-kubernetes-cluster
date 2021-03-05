@@ -124,6 +124,24 @@
 ######## 
 #####################################
 
+##### Mar 05 11:10:37 pi-r1d1 kubelet[10063]: F0305 11:10:37.652782   10063 server.go:198] failed to load Kubelet config file /var/lib/kubelet/config.yaml, error failed to read kubelet config file "/var/lib/kubelet/config.yaml", error: open /var/lib/kubelet/config.yaml: no such file or directory
+##### 
+##### The above error occurs in between setting up kubelet but not doing kubeadm init
+##### Thinking the kubeadm init should fix this
+##### 
+##### systemctl daemon-reload
+##### systemctl restart kubelet
+##### 
+##### kubeadm init --apiserver-advertise-address="{{ ansible_default_ipv4['address'] }}" --apiserver-cert-extra-sans="{{ ansible_hostname }}" --node-name={{ ansible_hostname }} --pod-network-cidr=192.168.0.0/24 --token=wls1ik.grvjcscyd0xrysrx
+##### 
+##### 
+##### sudo kubeadm init --control-plane-endpoint=pi-r1d1
+##### 
+##### 
+##### 
+
+
+
 #  - name: Restart kubelet
 #    service:
 #      name: kubelet
