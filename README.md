@@ -1,36 +1,23 @@
-
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-Manual Command Log
-
-On Master
-service --status-all
-
-
-
-
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-
-
 Tired of paying through the nose for a cloud kubernetes cluster. Fancy mining bitcoin with your own server rack. How about creating a **[Raspberry Pi Kubernetes Cluster](https://www.devopswiki.co.uk/wiki/kubernetes/pi/raspberry-pi-kubernetes-cluster)**
 
-# Use Ansible to Install Kubernetes on Vagrant VMs
+# Use Ansible to Install Kubernetes on a Raspberry Pi Cluster or Vagrant VMs
 
 This Ansible configuration manager will create a Kubernetes cluster on cloud VMs, vagrant VMs or even a Raspberry Pi cluster.
 
-## 1. Create and Validate the Ansible Inventory
+## 1. Setup the machines - install Ansible and configure SSH
 
-To create the Ansible inventory the steps are
+Ansible needs to be able to SSH into each node to configure it with whatever is needed for that node to play the role of a Kubernetes master or worker. To do this
 
-- run **`vagrant ssh-config`** to list the ports and the paths to the ssh private keys
-- create the section inside the **`~/.ssh/config**` file (see below)
-- verify you can ssh into the machines with **`vagrant ssh master`** and similar for the workers
-- verify you can ssh with **`ssh vagrant@kubemaster`** and similar for the workers
-- create the Ansible inventory **`hosts.ini`** file
-- validate the inventory with **`ansible -m ping all -i hosts.ini`**
-
+1. build your Raspberry Pi rack and install Ubuntu Server 20.04 on each node
+1. or install Vagrant and use it to create 3 or 4 VMs running Ubuntu Server
+1. install Ansible on a Linux laptop (or VM)
+1. ensure every node can contact every other node by name with **`/etc/hosts`** entries
+1. you need **`/etc/hosts`** entries on your Linux laptop/VM too mapping IP addresses
+1. create SSH private / public key pairs on your Ansible laptop
+1. put the private keys in the laptop's .ssh folder (eg **`~/.ssh/cluster.pi-r1d4.pem`**)
+1. use this command put the corresponding public keys into the node
+1. **`echo "<public key text>" >> ~/.ssh/authorized_keys`**
+1. create a section in your **`~/.ssh/config`** file like below
 
 ### The SSH Config File
 
@@ -45,31 +32,49 @@ Put this section inside the **`~/.ssh/config**` file to help Ansible configure t
 Host master
   HostName pi-r1d1
   User ubuntu
-  IdentityFile ~/.ssh/services.cluster.pi-r1d1.pem
+  IdentityFile ~/.ssh/cluster.pi-r1d1.pem
   StrictHostKeyChecking no
 
 Host worker1
   HostName pi-r1d2
   User ubuntu
-  IdentityFile ~/.ssh/services.cluster.pi-r1d2.pem
+  IdentityFile ~/.ssh/cluster.pi-r1d2.pem
   StrictHostKeyChecking no
 
 Host worker2
   HostName pi-r1d3
   User ubuntu
-  IdentityFile ~/.ssh/services.cluster.pi-r1d3.pem
+  IdentityFile ~/.ssh/cluster.pi-r1d3.pem
   StrictHostKeyChecking no
 
 Host worker3
   HostName pi-r1d4
   User ubuntu
-  IdentityFile ~/.ssh/services.cluster.pi-r1d4.pem
+  IdentityFile ~/.ssh/cluster.pi-r1d4.pem
   StrictHostKeyChecking no
 ```
 
-### The Ansislbe Inventory (Hosts) File
+In each block of the **`~/.ssh/config`** file you are pinpointing
+- the name (**`master`**, **`worker1`**) that refers to the host
+- the actual hostname of the node (set with **`hostnamectl`**)
+- the username (**`ubuntu`** is the default for Ubuntu server 20.04)
+- the path to the private key placed in the **`~/.ssh`** folder
 
-Use the already available inventory (hosts) file. As we have carefully setup our hosts in the **`~/.ssh/config`** file our Ansible inventory is extremely simple!
+### Validate your SSH Configuration
+
+If you are setting up a 4 node cluster (on Raspberry Pi or Vagrant VMs) you should be able to **ssh from** your linux laptop (with Ansible installed) **into each node** like this
+
+- **`ssh master`**
+- **`ssh worker1`**
+- **`ssh worker2`**
+- **`ssh worker3`**
+
+These names match the entries in the **`~/.ssh/config`** file. 
+
+
+## The Ansislbe Inventory File `hosts.ini`
+
+If you work hard and configure SSH **Ansible rewards your efforts** and automates the entire Kubernetes cluster configuration. In this repository the hosts.ini file looks like this.
 
 ```
 master
@@ -80,10 +85,19 @@ worker2
 worker3
 ```
 
-Now validate the inventory with these commands
+It's really simple. The names **`master`**, **`worker1`** and so on reflect the names you put into your laptop's **`~/.ssh/config`** file.
 
-- **`ansible -m ping all -i hosts.ini`**
-- **`ansible-playbook -i hosts.ini --list-hosts cluster-playbook.yml`**
+
+## Final Pre-Flight Checks
+
+Run through this checklist before you let Ansible take-off and create your kubernetes cluster.
+
+- **`ansible -m ping all -i hosts.ini`** # can Ansible talk to each node
+- **`ansible-playbook -i hosts.ini --syntax-check playbook-base-install.yml`**
+- **`ansible-playbook -i hosts.ini --list-hosts playbook-base-install.yml`**
+- **`ansible-playbook -i hosts.ini --list-tasks playbook-base-install.yml`**
+
+If you change any playbook you can syntax check it and look at the hosts that will be engaged with the **`--list-hosts`** flag.
 
 The output of the command with **`--list-hosts`** shows that the **hosts pattern**
 
@@ -91,35 +105,78 @@ The output of the command with **`--list-hosts`** shows that the **hosts pattern
 - **`master`** - will execute on the master machine
 - **`worker`** - will execute on the 3 workers
 
+
+## Create Your Kubernetes Cluster
+
+Creating the kubernetes cluster is about running three commands. There is **no need to change** the **`hosts.ini`** file because the playbooks know which things to do to all nodes, or the msater, or the worker or a combination.
+
+- **`ansible-playbook -i hosts.ini playbook-base-install.yml`**
+- **`ansible-playbook -i hosts.ini playbook-master-setup.yml`**
+- **`ansible-playbook -i hosts.ini playbook-worker-joins.yml`**
+
+## The Base Install Playbook
+
+This playbook prepares every node to be part of a kubernetes cluster no matter whether they are masters or workers. It is idempotent can be ran multiple times without a revert or reset playbook.
+
+## The Master Setup Playbook
+
+The master setup playbook **is also a laptop setup** playbook. It is responsible for
+
+- running **`kubeadm init`** on the node that will be master
+- creating kubectl configuration on the master node
+- creating kubectl configuration on your Linux laptop (running Ansible)
+- installing Calico pod networking necessary for pod communication
+
+Once the playbook completes you can examine your master from **both** the Linux laptop and when you ssh into the master node.
+
+- **`kubectl get nodes -o wide`**
+- **`kubectl get pods --all-namespaces`**
+
+This playbook leaves the kubeadm output logs in a file called **`kubeadm-init-output.log`** and for high availability setups it includes a command you can use to join multiple masters (control plane) to the cluster.
+
+## The Worker Joins Playbook
+
+This playbook picks up a join command from the master and applies it to each worker. Use the **`kubectl get nodes -o wide`** command to verify the worker has joined.
+
+You can also ssh into each node and run **`watch docker ps -a`** to see what container workloads are executing on that node.
+
+
+## deploy and scale `nginx` to validate the kubernetes cluster
+
+You can use kubectl from your linux laptop (or VM) to interact with your cluster. Let's deploy nginx and then scale it up to run many pods on each machine.
+
+- **`kubectl create deployment nginx --image=nginx`**
+- **`kubectl get pods -o wide`**
+- **`kubectl create service nodeport nginx --tcp=80:80`**
+- **`kubectl get svc -o wide`**
+
 ```
-playbook: cluster-playbook.yml
-
-  play #1 (all): Configure the Kubernetes Cluster Nodes	TAGS: []
-    pattern: ['all']
-    hosts (4):
-      ansible_host=master
-      ansible_host=worker3
-      ansible_host=worker2
-      ansible_host=worker1
-
-  play #2 (master): Configure Control Plane and Setup kubectl configuration	TAGS: []
-    pattern: ['master']
-    hosts (1):
-      ansible_host=master
-
-  play #3 (worker): Get each Worker to Join the Cluster	TAGS: []
-    pattern: ['worker']
-    hosts (3):
-      ansible_host=worker1
-      ansible_host=worker3
-      ansible_host=worker2
+NAME                     READY   STATUS    RESTARTS   AGE   IP               NODE      NOMINATED NODE   READINESS GATES
+nginx-6799fc88d8-wsnj4   1/1     Running   0          49s   172.16.148.129   pi-r1d2   <none>           <none>
 ```
 
 
----
+```
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE     SELECTOR
+kubernetes   ClusterIP   10.96.0.1      <none>        443/TCP        3h59m   <none>
+nginx        NodePort    10.97.23.211   <none>        80:32107/TCP   11s     app=nginx
+```
+
+For quick validation we bound the service to a port on the node. In this case the node is **`pi-r1d2`** and the port is **`32107`** so this is the url.
+
+```
+http://pi-r1d2:32107/
+```
+
+There it is. The ubiquitous **`Welcome to nginx!`** splash page.
 
 
-## Keeping /etc/hosts database up to date on All Nodes
+## Summary
+
+**Now your `kubernetes cluster` is ready for lots of learning, validating, software development, bitcoin mining, problem solving, model training and more besides.**
+
+
+## Appendix A | Use Ansible to update /etc/hosts database
 
 **Kubernetes nodes all need to be able to talk to each other, not just with the master.**
 
@@ -143,29 +200,24 @@ If you are not running a DNS server but have a number of hosts to manage alongsi
 ---
 
 
-## Create Kubernetes Cluster via Ansible
+## Appendix B | Finding Docker Versions
 
-- **`ansible-playbook -i hosts.ini --syntax-check cluster-playbook.yml`**
-- **`ansible-playbook -i hosts.ini cluster-playbook.yml`**
+Sometimes Kubernetes (during **`kubeadm init`**) declares incompatibility with the **docker version** installed on the nodes.
 
+At the time of writing Kubernetes refused to use **`docker 20.10`** so we needed to specify the docker version like so **`docker-ce=5:19.03.15~3-0~ubuntu-focal`** for **Ubuntu 20.04** Focal Fossa. The steps are to
 
+- **`sudo apt-cache showpkg docker-ce`** - discover available versions
+- replace the version tag so that Ansible installs the correct one
 
-## How to Determine Versions
+But now you have to remove the already present docker and kubernetes packages.
 
-Sometimes Kubernetes (via the **`kubeadm init`** does not like the docker version. To change it you need to ssh into all nodes and
-
-- **`sudo apt-cache showpkg docker-ce`** - discover the available versions
-- read the error and reset the version within the Install docker task
-
-- **`docker system prune --all --force`**
-- **`sudo apt-get remove docker-ce --assume-yes`** - remove the current docker-ce package
+- **`docker system prune --all --force`** - remove all containers and images
+- **`sudo apt-get remove docker-ce --assume-yes`** - remove docker-ce
 - **`sudo apt autoremove docker-ce --assume-yes`** - and again
-- **`sudo apt-get remove docker-ce-cli --assume-yes`** - remove the current docker-ce-cli package
+- **`sudo apt-get remove docker-ce-cli --assume-yes`** - remove docker-ce-cli
 - **`sudo apt autoremove docker-ce-cli --assume-yes`** - and again
-- **`sudo apt-get remove containerd.io --assume-yes`** - and again
-- **`sudo apt autoremove containerd.io --assume-yes`** - remove the current containerd.io package
 
-When we need to backpedal and remove the kubernetes packages use these commands.
+It may also pay to backpedal and remove the kubernetes packages. This is how.
 
 - **`sudo apt-get remove kubectl --assume-yes`**
 - **`sudo apt autoremove kubectl --assume-yes`**
@@ -174,201 +226,4 @@ When we need to backpedal and remove the kubernetes packages use these commands.
 - **`sudo apt-get remove kubeadm --assume-yes`**
 - **`sudo apt autoremove kubeadm --assume-yes`**
 
-
-## Create the Ansible Playbooks that provision Kubernetes
-
-There are 3 key playbooks that will provision the kubernetes cluster. The steps to creating them are
-
-- create the Ansible dependencies.yml file
-- create the Ansible cluster **`kubemaster.yml`** file
-- create the Ansible cluster **`kubeworker.yml`** file
-
-
-### The Ansible dependencies.yml playbook
-
-The dependencies playbook installs necessary software on the masters and workers and also ensures that swapfiles are removed.
-
-```
-- hosts: all
-  become: yes
-  tasks:
-
-  - name: install Aptitude
-    apt:
-      name: aptitude
-      state: present
-      update_cache: true
-
-  - name: install Docker
-    apt:
-      name: docker.io
-      state: present
-      update_cache: false
-
-  - name: Install Transport HTTPS
-    apt:
-      name: apt-transport-https
-      state: present
-
-  - name: install kubelet
-    apt:
-      name: kubelet
-      state: present
-      update_cache: false
-
-  - name: install kubeadm
-    apt:
-      name: kubeadm
-      state: present
-
-  - name: Remove swapfile from /etc/fstab
-    mount:
-      name: "{{ item }}"
-      fstype: swap
-      state: absent
-    with_items:
-      - swap
-      - none
-
-  - name: Disable swap
-    command: swapoff -a
-    when: ansible_swaptotal_mb > 0
-
-  - name: add Kubernetes apt-key
-    apt_key:
-      url: "https://packages.cloud.google.com/apt/doc/apt-key.gpg"
-      state: present
-
-  - name: add Kubernetes' APT repository
-    apt_repository:
-      repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
-      state: present
-      filename: 'kubernetes'
-
-- hosts: master
-  become: yes
-  tasks:
-
-  - name: install kubectl
-    apt:
-      name: kubectl
-      state: present
-      force: yes
-```
-
-You can validate the dependencies using **`ansible-playbook -i hosts.ini dependencies.yml`**
-
-### The Ansible kubemaster.yml playbook
-
-This playbook provisions the kubernetes master nodes and sets up the pod network.
-
-```
-- hosts: master
-  become: yes
-  tasks:
-
-    - name: Add the "kube" group
-      group:
-        name: kube
-        state: present
-
-    - name: Add the user "kube"
-      user:
-        name: kube
-        comment: Kubernetes user
-        group: kube
-
-    - name: initialize the cluster
-      shell: kubeadm init --pod-network-cidr=10.99.0.0/16 >> cluster_init.txt
-      args:
-        chdir: $HOME
-        creates: cluster_init.txt
-
-    - name: create .kube directory
-      become: yes
-      become_user: kube
-      file:
-        path: $HOME/.kube
-        state: directory
-        mode: 0755
-
-    - name: copy admin.conf to user's kube config
-      copy:
-        src: /etc/kubernetes/admin.conf
-        dest: /home/kube/.kube/config
-        remote_src: yes
-        owner: kube
-
-    - name: install Pod network
-      become: yes
-      become_user: kube
-      shell: kubectl apply -f https://docs.projectcalico.org/v3.14/manifests/calico.yaml >> pod_network_setup.txt
-      args:
-        chdir: $HOME
-        creates: pod_network_setup.txt
-```
-
-You can validate the master provisioning playbook using **`ansible-playbook -i hosts.ini kubemaster.yml`**
-
-### Create the Kubernetes workers playbook
-
-The kubernetes workers playbook is mainly focused on getting the worker to join the cluster by taking the join command from one (master) and giving it to the worker in question.
-
-```
-- hosts: master
-  become: yes
-  gather_facts: false
-
-  tasks:
-    - name: get join command
-      become_user: kube
-      shell: kubeadm token create --print-join-command --description "Generated by Ansible"
-      register: generated_join_command
-
-    - name: grab join command
-      set_fact:
-        join_command: "{{ generated_join_command.stdout_lines[0] }}"
-
-- hosts: worker
-  become: yes
-  tasks:
-
-    - name: join cluster
-      shell: "{{ hostvars['master'].join_command }} >> node_join.txt"
-      args:
-        chdir: $HOME
-        creates: node_join.txt
-```
-
-You can validate the worker joining playbook using **`ansible-playbook -i hosts.ini kubeworker.yml`**
-
-
----
-
-
-## Accessing the Kubernetes Cluster
-
-To access the cluster properly you should export the **`~/.kube/config`** file from the master onto your host laptop which needs to have kubectl installed. Now **`kubectl get nodes`** should return something sensible.
-
-Initially to access the cluster you
-- ssh into the master **`vagrant ssh master`**
-- become the kube user **`sudo su kube`**
-- run **`kubectl get nodes`**
-
-Now your cluster is ready for lots of learning, validating and provisioning in a local setting without the hefty cloud fees.
-
-
-## Kubernetes Cluster Internet Resources
-
-This is the only resource that works out of the box with one **`vagrant up`** command. However there are still some great references pages where authors have built kubernetes clusters with Ansible and Vagrant.
-
-- **[Create Kubernetes Cluster from IT WonderLab](https://www.itwonderlab.com/ansible-kubernetes-vagrant-tutorial/)**
-- **[Install Calico Networking for On-Premise Deployments](https://docs.projectcalico.org/getting-started/kubernetes/self-managed-onprem/onpremises)**
-- **[Kubernetes Vagrant and Ansible Github Repo](https://github.com/ctienshi/kubernetes-ansible/tree/master/centos)**
-- **[Ansible Official User Guide](https://docs.ansible.com/ansible/latest/user_guide/index.html)**
-- **[Installing Kubernetes on Docker](https://www.howtoforge.com/tutorial/how-to-install-kubernetes-on-ubuntu/)**
-- **[Out of Date Kubernetes Guide using Ubuntu 16.04](https://kubernetes.io/blog/2019/03/15/kubernetes-setup-using-ansible-and-vagrant/)**
-- **[Medium Kubernetes Cluster with Vagrant and Ansible](https://medium.com/@MonadicT/create-a-kubernetes-cluster-with-vagrant-and-ansible-88af7948a1fc)**
-- **[Using Ansible to Create a Kubernetes Virtual Lab](https://graspingtech.com/create-kubernetes-cluster/)**
-- **[Create a Kubernetes Cluster on Vagrant using Ansible](https://jeremievallee.com/2017/01/31/kubernetes-with-vagrant-ansible-kubeadm.html)**
-- **[Create a Standalone Kubernetes Cluster with Vagrant](https://nextbreakpoint.com/posts/article-create-standalone-kubernetes-cluster-with-vagrant.html)**
+Note there is no need to install **`containerd.io`** separately as it is already included within docker.

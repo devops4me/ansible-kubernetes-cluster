@@ -5,10 +5,10 @@
 # ######################### #
 #
 # This playbook prepares every node to be part of a kubernetes cluster whether
-# they are destined to be masters or workers).
+# they are destined to be masters or workers.
 #
-# This playbook is designed to be idempotent so you can run it multiple times
-# without needing to revert / reset with another playbook.
+# This playbook is idempotent can be ran multiple times without a revert or
+# reset playbook.
 #
 # The main pre-requisite is that ssh accesss has been setup and the hosts listed
 # within the hosts.ini file.
