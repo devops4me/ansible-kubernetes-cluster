@@ -4,15 +4,28 @@ Tired of paying through the nose for a cloud kubernetes cluster. Fancy mining bi
 
 This Ansible configuration manager will create a Kubernetes cluster on cloud VMs, vagrant VMs or even a Raspberry Pi cluster.
 
-## 1. Setup the machines - install Ansible and configure SSH
 
-Ansible needs to be able to SSH into each node to configure it with whatever is needed for that node to play the role of a Kubernetes master or worker. To do this
+---
+
+
+## step 1 - install ansible and setup nodes
+
+We need to prepare our nodes, install Ansible and configure **`/etc/hosts`** entries so that machines can talk to one another.
 
 1. build your Raspberry Pi rack and install Ubuntu Server 20.04 on each node
 1. or install Vagrant and use it to create 3 or 4 VMs running Ubuntu Server
 1. install Ansible on a Linux laptop (or VM)
 1. ensure every node can contact every other node by name with **`/etc/hosts`** entries
 1. you need **`/etc/hosts`** entries on your Linux laptop/VM too mapping IP addresses
+
+
+---
+
+
+## step 2 - setup ssh from ansible host
+
+Ansible needs to be able to SSH into each node to configure it with whatever is needed for that node to play the role of a Kubernetes master or worker. To do this
+
 1. create SSH private / public key pairs on your Ansible laptop
 1. put the private keys in the laptop's .ssh folder (eg **`~/.ssh/cluster.pi-r1d4.pem`**)
 1. use this command put the corresponding public keys into the node
@@ -60,7 +73,11 @@ In each block of the **`~/.ssh/config`** file you are pinpointing
 - the username (**`ubuntu`** is the default for Ubuntu server 20.04)
 - the path to the private key placed in the **`~/.ssh`** folder
 
-### Validate your SSH Configuration
+
+---
+
+
+## step 3 - validate the ssh configuration
 
 If you are setting up a 4 node cluster (on Raspberry Pi or Vagrant VMs) you should be able to **ssh from** your linux laptop (with Ansible installed) **into each node** like this
 
@@ -72,7 +89,10 @@ If you are setting up a 4 node cluster (on Raspberry Pi or Vagrant VMs) you shou
 These names match the entries in the **`~/.ssh/config`** file. 
 
 
-## The Ansislbe Inventory File `hosts.ini`
+---
+
+
+## step 4 - the `hosts.ini` ansislbe inventory
 
 If you work hard and configure SSH **Ansible rewards your efforts** and automates the entire Kubernetes cluster configuration. In this repository the hosts.ini file looks like this.
 
@@ -88,7 +108,10 @@ worker3
 It's really simple. The names **`master`**, **`worker1`** and so on reflect the names you put into your laptop's **`~/.ssh/config`** file.
 
 
-## Final Pre-Flight Checks
+---
+
+
+## step 5 - ansible pre-flight checks
 
 Run through this checklist before you let Ansible take-off and create your kubernetes cluster.
 
@@ -106,7 +129,10 @@ The output of the command with **`--list-hosts`** shows that the **hosts pattern
 - **`worker`** - will execute on the 3 workers
 
 
-## Create Your Kubernetes Cluster
+---
+
+
+## step 6 - create your kubernetes cluster
 
 Creating the kubernetes cluster is about running three commands. There is **no need to change** the **`hosts.ini`** file because the playbooks know which things to do to all nodes, or the msater, or the worker or a combination.
 
@@ -114,11 +140,11 @@ Creating the kubernetes cluster is about running three commands. There is **no n
 - **`ansible-playbook -i hosts.ini playbook-master-setup.yml`**
 - **`ansible-playbook -i hosts.ini playbook-worker-joins.yml`**
 
-## The Base Install Playbook
+### The Base Install Playbook
 
 This playbook prepares every node to be part of a kubernetes cluster no matter whether they are masters or workers. It is idempotent can be ran multiple times without a revert or reset playbook.
 
-## The Master Setup Playbook
+### The Master Setup Playbook
 
 The master setup playbook **is also a laptop setup** playbook. It is responsible for
 
@@ -134,14 +160,17 @@ Once the playbook completes you can examine your master from **both** the Linux 
 
 This playbook leaves the kubeadm output logs in a file called **`kubeadm-init-output.log`** and for high availability setups it includes a command you can use to join multiple masters (control plane) to the cluster.
 
-## The Worker Joins Playbook
+### The Worker Joins Playbook
 
 This playbook picks up a join command from the master and applies it to each worker. Use the **`kubectl get nodes -o wide`** command to verify the worker has joined.
 
 You can also ssh into each node and run **`watch docker ps -a`** to see what container workloads are executing on that node.
 
 
-## deploy and scale `nginx` to validate the kubernetes cluster
+---
+
+
+## step 7 - deploy and scale `nginx`
 
 You can use kubectl from your linux laptop (or VM) to interact with your cluster. Let's deploy nginx and then scale it up to run many pods on each machine.
 
@@ -168,7 +197,13 @@ For quick validation we bound the service to a port on the node. In this case th
 http://pi-r1d2:32107/
 ```
 
-There it is. The ubiquitous **`Welcome to nginx!`** splash page.
+There it is. The ubiquitous **`Welcome to nginx!`** splash page. Don't forget to scale up the number of nginx pods.
+
+- **`kubectl scale deployments/nginx --replicas=4`**
+- **`kubectl get pods -o wide`**
+
+
+---
 
 
 ## Summary
