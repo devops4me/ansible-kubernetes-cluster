@@ -1,9 +1,13 @@
 ---
 #
+# ######################## #
+# playbook-worker-join.yml #
+# ######################## #
+#
 # This playbook will attempt to join any worker node into the cluster being
 # controlled by the master node. The prerequisites are
 #
-#   - the playbook-cluster-nodes.yml has been run
+#   - the playbook-base-install.yml has been run for all nodes
 #   - the master was successfully created with playbook-master-setup.yml
 #   - (either) the worker/s have never attempted to join a cluster
 #   - (or)     the worker/s have been reset with playbook-worker-reset.yml

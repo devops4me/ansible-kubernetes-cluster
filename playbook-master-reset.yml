@@ -1,13 +1,5 @@
 ---
 #
-# This playbook will take a master node that has undergone the basic setup applied
-# in the all-nodes-playbook.yml and makes the single node the first master node.
-#
-# After this playbook executes the log output will provide a token and sha56 hash
-# that are required for workers to join this cluster.
-#
-# Take the token and hash and run the worker-join-playbook to get new worker nodes
-# to join the cluster.
 #
 - hosts: all
   become: true
