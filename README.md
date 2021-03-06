@@ -140,11 +140,11 @@ Creating the kubernetes cluster is about running three commands. There is **no n
 - **`ansible-playbook -i hosts.ini playbook-master-setup.yml`**
 - **`ansible-playbook -i hosts.ini playbook-worker-joins.yml`**
 
-### The Base Install Playbook
+### #1 base install playbook
 
 This playbook prepares every node to be part of a kubernetes cluster no matter whether they are masters or workers. It is idempotent can be ran multiple times without a revert or reset playbook.
 
-### The Master Setup Playbook
+### #2 master setup playbook
 
 The master setup playbook **is also a laptop setup** playbook. It is responsible for
 
@@ -160,7 +160,7 @@ Once the playbook completes you can examine your master from **both** the Linux 
 
 This playbook leaves the kubeadm output logs in a file called **`kubeadm-init-output.log`** and for high availability setups it includes a command you can use to join multiple masters (control plane) to the cluster.
 
-### The Worker Joins Playbook
+### #3 worker joins playbook
 
 This playbook picks up a join command from the master and applies it to each worker. Use the **`kubectl get nodes -o wide`** command to verify the worker has joined.
 
